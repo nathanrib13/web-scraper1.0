@@ -1,31 +1,29 @@
-const axios = require("axios")
-const cheerio = require("cheerio")
-const express = require("express")
+const puppeteer = require('puppeteer')
 
-const app = express()
-const PORT = 3000
-const url = "https://globo.com/"
+const url = "https://gshow.globo.com/realities/bbb"
 
-app.get("/posts", async (req, res)=>{
-    try {
-        const posts = await scrapePosts()
-        res.status(200).json({posts})
-    } catch (error) {
-        res.status(500).json({messageL: "Error fetching posts"})
-    }
-})
+async function main(){
+    const browser = await puppeteer.launch({
+        headless: false
+    });
+    const page = await browser.newPage()
+    await page.goto(url)
 
-async function scrapePosts (){
-    const response =  await axios(url)
-    const html = response.data
-    const $ = cheerio.load(html)
-    const posts = []
-    $(".post-row.with-6-posts .post").each(function(){
-        const url =  $(this).find(".post__link").attr("href")
-        const postTitle = $(this).find(".post__title").text()
-        posts.push({url, postTitle})
+    await page.evaluate(() =>{
+        const posts = Array.from(document.querySelectorAll(".post-item"))
+
+        const data = posts.map((post)=>{
+            url: post.querySelector('post-materia-text')?.getAttribute('.href')
+            title: post.querySelector('.post-materia-text__title')?.textContent
+            description: post.querySelector('.post-materia-text__description')?.textContent
+        })
+
+        return data
     })
-    return posts
-}
 
-app.listen(PORT,() =>{console.log(`server is running at port ${PORT}`)})
+
+
+
+    await browser.close()
+}
+main()
